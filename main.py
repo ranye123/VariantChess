@@ -1,3 +1,4 @@
+import os
 import random
 import sys
 import time
@@ -8,7 +9,7 @@ from pygame.locals import *
 
 # 初始化pygame
 pygame.init()
-pygame.mixer.init(frequency=44100)
+pygame.mixer.init()
 
 # 常量定义
 BOARD_SIZE = 9  # 9x9棋盘
@@ -680,11 +681,21 @@ class ChessGame:
         surface.blit(count_surface, (10, 70))
 
 
+def resource_path(relative_path):
+    """动态获取资源绝对路径（兼容开发环境和PyInstaller打包环境）"""
+    if getattr(sys, 'frozen', False):  # 检测是否在打包环境中运行
+        base_path = getattr(sys, '_MEIPASS', '.')  # 资源被解压到临时目录
+    else:
+        base_path = os.path.dirname(os.path.abspath(__file__))  # 开发环境使用当前目录
+    full_path = os.path.join(base_path, relative_path)
+    return os.path.normpath(full_path)
+
+
 def main():
     # 创建游戏实例
     game = ChessGame()
-    pygame.mixer.music.load("vedio/im_dead.wav")
-    # dead_sound = pygame.mixer.Sound("vedio/im_dead.wav")
+    audio_path = resource_path(os.path.join("vedio", "im_dead.wav"))
+    pygame.mixer.music.load(audio_path)
     # 游戏主循环
     clock = pygame.time.Clock()
     running = True
@@ -720,6 +731,7 @@ def main():
         clock.tick(30)
 
     pygame.quit()
+    pygame.mixer.quit()
     sys.exit()
 
 
