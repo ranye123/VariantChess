@@ -7,24 +7,11 @@ import bisect
 import pygame
 from pygame.locals import *
 
+from configs import *
+
 # 初始化pygame
 pygame.init()
 pygame.mixer.init()
-
-# 常量定义
-BOARD_SIZE = 9  # 9x9棋盘
-GRID_SIZE = 60  # 每个格子的像素大小
-WINDOW_WIDTH = BOARD_SIZE * GRID_SIZE
-WINDOW_HEIGHT = BOARD_SIZE * GRID_SIZE + 100  # 增加顶部信息栏高度
-BACKGROUND_COLOR = (238, 203, 173)  # 象棋底色(浅棕色)
-LINE_COLOR = (220, 20, 20)  # 红色线条
-RED_PIECE_COLOR = (220, 20, 20)  # 红色棋子
-BLACK_PIECE_COLOR = (20, 20, 20)  # 黑色棋子
-HIGHLIGHT_COLOR = (20, 220, 20, 180)  # 高亮颜色
-INFO_BG_COLOR = (230, 230, 230)  # 信息栏背景色
-DIALOG_BG_COLOR = (240, 240, 240)  # 对话框背景色
-RED_WINNER_ROUND = 199
-
 # 创建游戏窗口
 screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 pygame.display.set_caption('Variant Chess Game')
@@ -135,6 +122,8 @@ class ChessGame:
         # 50关之内，随机出现一到三个棋子
         if self.round_count < 50:
             self.new_pieces_count = random.choices([1, 2, 3], [10, 20, 5])[0]
+        elif self.round_count < 10:
+            self.new_pieces_count = 3
         else:
             # 50关之后，棋盘棋子数量小于五，一次出现五个，小于十一次出现4个，否则保持随机
             if len(self.black_pieces) < 5:
@@ -429,7 +418,6 @@ class ChessGame:
         # 检查是否吃子
         target_piece = self.board[new_y][new_x]
         if target_piece:
-            print(target_piece.piece_type)
             if target_piece.color == 'red':
                 # self.red_piece.remove(target_piece)
                 self.game_over = True
@@ -599,11 +587,11 @@ class ChessGame:
     def show_game_over_dialog(self):
         """显示透明游戏结束对话框"""
         # 创建带透明通道的 Surface
-        dialog_surface = pygame.Surface((300, 160), pygame.SRCALPHA)  # SRCALPHA 标志启用透明通道[1z](@ref)
+        dialog_surface = pygame.Surface((300, 160), pygame.SRCALPHA)  # SRCALPHA 标志启用透明通道
         dialog_rect = dialog_surface.get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2))
 
         # 绘制半透明对话框背景
-        pygame.draw.rect(dialog_surface, (*DIALOG_BG_COLOR, 180), dialog_surface.get_rect())  # 180 是透明度值[7](@ref)
+        pygame.draw.rect(dialog_surface, (*DIALOG_BG_COLOR, 180), dialog_surface.get_rect())  # 180 是透明度值
         pygame.draw.rect(dialog_surface, (0, 0, 0, 255), dialog_surface.get_rect(), 2)  # 黑色边框
 
         # 添加文本
@@ -693,11 +681,16 @@ def resource_path(relative_path):
 
 def main():
     # 创建游戏实例
+
+    from register import LoginSystem
+    login_system = LoginSystem(screen)
+
     game = ChessGame()
     audio_path = resource_path(os.path.join("vedio", "im_dead.wav"))
     pygame.mixer.music.load(audio_path)
     # 游戏主循环
     clock = pygame.time.Clock()
+    current_state = LOGIN_STATE
     running = True
     restart_btn = None
     quit_btn = None
@@ -706,26 +699,38 @@ def main():
         for event in pygame.event.get():
             if event.type == QUIT:
                 running = False
-            elif event.type == MOUSEBUTTONDOWN:
-                if event.button == 1:  # 左键点击
-                    if game.game_over and restart_btn and quit_btn:
-                        if restart_btn.collidepoint(event.pos):
-                            game = ChessGame()  # 重新开始游戏
-                        elif quit_btn.collidepoint(event.pos):
-                            running = False
-                    else:
-                        game.handle_click(event.pos)
 
+            if current_state == LOGIN_STATE or current_state == REGISTER_STATE:
+                login_system.handle_event(event)
+
+                # 登录成功后切换到游戏状态
+                if login_system.state == GAME_STATE:
+                    current_state = GAME_STATE
+                    # 重置游戏
+                    game = ChessGame()
+            elif current_state == GAME_STATE or current_state == GAME_OVER_STATE:
+                if event.type == MOUSEBUTTONDOWN:
+                    if event.button == 1:  # 左键点击
+                        if game.game_over and restart_btn and quit_btn:
+                            if restart_btn.collidepoint(event.pos):
+                                game = ChessGame()  # 重新开始游戏
+                            elif quit_btn.collidepoint(event.pos):
+                                running = False
+                        else:
+                            game.handle_click(event.pos)
         # 绘制游戏
         screen.fill((0, 0, 0))
-        game.draw_chess_board_pieces(screen)
-
-        # 如果游戏结束，显示对话框
-        if game.game_over:
-            if not hasattr(game, 'death_sound_played'):
-                pygame.mixer.music.play()
-                game.death_sound_played = True
-            restart_btn, quit_btn = game.show_game_over_dialog()
+        if current_state == LOGIN_STATE or current_state == REGISTER_STATE:
+            game.draw_chess_board_pieces(screen)
+            login_system.draw()
+        elif current_state == GAME_STATE:
+            game.draw_chess_board_pieces(screen)
+            # 如果游戏结束，显示对话框
+            if game.game_over:
+                if not hasattr(game, 'death_sound_played'):
+                    pygame.mixer.music.play()
+                    game.death_sound_played = True
+                restart_btn, quit_btn = game.show_game_over_dialog()
 
         pygame.display.flip()
         clock.tick(30)
