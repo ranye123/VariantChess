@@ -67,7 +67,7 @@ class ChessGame:
         self.winner = None
         self.occur_index = [0, 10, 30, 50, 70, 100]
         self.choice_weight = [20, 15, 10, 10, 10, 5]
-
+        self.score_data = {'卒': 0, '士': 0, '象': 0, '马': 0, '炮': 0, '车': 0}
         self.new_pieces_count = None
         self.occur_pieces = None
         self.reset_game()
@@ -419,7 +419,6 @@ class ChessGame:
         target_piece = self.board[new_y][new_x]
         if target_piece:
             if target_piece.color == 'red':
-                # self.red_piece.remove(target_piece)
                 self.game_over = True
                 self.winner = 'black'
                 # # 检查是否红车被吃
@@ -428,6 +427,7 @@ class ChessGame:
                 if target_piece.piece_type == '将':
                     self.super_move = True
                 self.black_pieces.remove(target_piece)
+                self.score_data[target_piece.piece_type] += 1
 
         # 更新棋盘
         self.board[old_y][old_x] = None
@@ -497,6 +497,7 @@ class ChessGame:
                                         self.super_move = True
                                     self.black_pieces.remove(self.board[black_y_pos][black_x_pos])
                                     self.board[black_y_pos][black_x_pos] = None
+                                    self.score_data[black_piece.piece_type] += 1
 
                         # 检查红车是否被威胁
                         if self.is_red_rook_threatened():
@@ -731,10 +732,13 @@ def main():
                     pygame.mixer.music.play()
                     game.death_sound_played = True
                 restart_btn, quit_btn = game.show_game_over_dialog()
+                print(game.score_data)
+                print(sum(PIECES_SCORE[k] * v for k, v in game.score_data.items()))
 
         pygame.display.flip()
         clock.tick(30)
 
+    # 总积分
     pygame.quit()
     pygame.mixer.quit()
     sys.exit()

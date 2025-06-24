@@ -20,3 +20,16 @@ LOGIN_STATE = 0
 REGISTER_STATE = 1
 GAME_STATE = 2
 GAME_OVER_STATE = 3
+
+
+"""棋子积分"""
+
+PIECES_SCORE = {
+    '卒': 10,
+    '士': 20,
+    '象': 20,
+    '马': 30,
+    '炮': 30,
+    '车': 40,
+    '将': 50,
+}

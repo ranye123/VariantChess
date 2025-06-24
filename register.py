@@ -126,7 +126,8 @@ class LoginSystem:
         # 绘制背景
 
         # self.screen.fill((30, 30, 50))  DIALOG_BG_COLOR
-        pygame.draw.rect(self.login_surface, (210,180,140, 200), self.login_surface.get_rect())  # 180 是透明度值
+        pygame.draw.rect(self.login_surface, (210,180,140, 255), self.login_surface.get_rect())  # 180 是透明度值
+        # pygame.draw.rect(self.login_surface, (190,190,190, 255), self.login_surface.get_rect())  # 180 是透明度值
         pygame.draw.rect(self.login_surface, (0, 0, 0, 255), self.login_surface.get_rect(), 2)  # 黑色边框
 
         self.screen.blit(self.login_surface, self.login_rect.topleft)
