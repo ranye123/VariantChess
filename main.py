@@ -67,7 +67,7 @@ class ChessGame:
         self.winner = None
         self.occur_index = [0, 10, 30, 50, 70, 100]
         self.choice_weight = [20, 15, 10, 10, 10, 5]
-        self.score_data = {'卒': 0, '士': 0, '象': 0, '马': 0, '炮': 0, '车': 0}
+        self.score_data = {'卒': 0, '士': 0, '象': 0, '马': 0, '炮': 0, '车': 0, '将': 0}
         self.new_pieces_count = None
         self.occur_pieces = None
         self.reset_game()
@@ -664,8 +664,9 @@ class ChessGame:
         next_surface = font.render(next_text, True, (0, 0, 0))
         surface.blit(next_surface, (10, 40))
 
-        # 显示新增棋子次数
-        count_text = f"Appearance count: {self.appearance_count}"
+        # 得分
+        total_score = sum(PIECES_SCORE[k] * v for k, v in self.score_data.items())
+        count_text = f"Score: {total_score}"
         count_surface = font.render(count_text, True, (0, 0, 0))
         surface.blit(count_surface, (10, 70))
 
@@ -732,8 +733,6 @@ def main():
                     pygame.mixer.music.play()
                     game.death_sound_played = True
                 restart_btn, quit_btn = game.show_game_over_dialog()
-                print(game.score_data)
-                print(sum(PIECES_SCORE[k] * v for k, v in game.score_data.items()))
 
         pygame.display.flip()
         clock.tick(30)
