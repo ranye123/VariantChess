@@ -33,3 +33,11 @@ PIECES_SCORE = {
     '车': 40,
     '将': 50,
 }
+
+LOGIN_URL = 'http://127.0.0.1:80/user/login/'
+REGISTER_URL = 'http://127.0.0.1:80/user/register/'
+
+MINIMUM_PASSWD_LEN = 4
+MAXIMUM_PASSWD_LEN = 12
+
+

@@ -2,9 +2,11 @@ import os
 import random
 import sys
 import time
+import uuid
 from copy import copy
 import bisect
 import pygame
+import requests
 from pygame.locals import *
 
 from configs import *
@@ -428,6 +430,7 @@ class ChessGame:
                     self.super_move = True
                 self.black_pieces.remove(target_piece)
                 self.score_data[target_piece.piece_type] += 1
+                self.save_score()
 
         # 更新棋盘
         self.board[old_y][old_x] = None
@@ -498,6 +501,7 @@ class ChessGame:
                                     self.black_pieces.remove(self.board[black_y_pos][black_x_pos])
                                     self.board[black_y_pos][black_x_pos] = None
                                     self.score_data[black_piece.piece_type] += 1
+                                    self.save_score()
 
                         # 检查红车是否被威胁
                         if self.is_red_rook_threatened():
@@ -670,6 +674,10 @@ class ChessGame:
         count_surface = font.render(count_text, True, (0, 0, 0))
         surface.blit(count_surface, (10, 70))
 
+    def save_score(self):
+        total_score = sum(PIECES_SCORE[k] * v for k, v in self.score_data.items())
+        requests.post("http://127.0.0.1:80/rank/", data={'total_score': total_score})
+
 
 def resource_path(relative_path):
     """动态获取资源绝对路径（兼容开发环境和PyInstaller打包环境）"""
@@ -711,6 +719,7 @@ def main():
                     # 重置游戏
                     game = ChessGame()
             elif current_state == GAME_STATE or current_state == GAME_OVER_STATE:
+                # 游戏结束 记录游戏数据
                 if event.type == MOUSEBUTTONDOWN:
                     if event.button == 1:  # 左键点击
                         if game.game_over and restart_btn and quit_btn:
