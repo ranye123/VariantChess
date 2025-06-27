@@ -34,6 +34,7 @@ PIECES_SCORE = {
     '将': 50,
 }
 
+UPLOAD_SCORE = "http://127.0.0.1:80/rank/"
 LOGIN_URL = 'http://127.0.0.1:80/user/login/'
 REGISTER_URL = 'http://127.0.0.1:80/user/register/'
 

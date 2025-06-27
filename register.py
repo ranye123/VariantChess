@@ -1,9 +1,9 @@
-import pygame
 import json
-import os
 
+import pygame
 import requests
 from pygame.locals import *
+
 from configs import *
 
 
@@ -165,7 +165,6 @@ class LoginSystem:
 
         # 绘制输入框
         for name, box in self.input_boxes.items():
-            # color = (100, 200, 255) if self.active_input == name else (200, 200, 200)
             color = (85, 102, 0) if self.active_input == name else (200, 200, 200)
             pygame.draw.rect(self.screen, color, box, 2, border_radius=5)
 
@@ -209,12 +208,9 @@ class LoginSystem:
 
         # 显示错误信息
         if self.error_msg:
-            # error_text = self.error_msg_font.render(self.error_msg, True, (255, 50, 50))
             error_text = self.error_msg_font.render(self.error_msg, True, (255, 50, 50))
-            # self.screen.blit(error_text, (self.width // 2 - error_text.get_width() // 2, self.height // 2 + 150))
             self.screen.blit(error_text, (self.login_rect.x + 10, self.login_rect.y + 175, 200, 30))
 
         if self.passwd_error_msg:
             error_text = self.error_msg_font.render(self.passwd_error_msg, True, (255, 50, 50))
-            # self.screen.blit(error_text, (self.width // 2 - error_text.get_width() // 2, self.height // 2 + 150))
             self.screen.blit(error_text, (self.login_rect.x + 10, self.login_rect.y + 175, 200, 30))

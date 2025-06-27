@@ -1,7 +1,9 @@
 import os
 import random
+from register import LoginSystem
 import sys
-import time
+import asyncio
+import sys
 import uuid
 from copy import copy
 import bisect
@@ -9,7 +11,12 @@ import pygame
 import requests
 from pygame.locals import *
 
+import aiohttp
+import asyncio
 from configs import *
+
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 # 初始化pygame
 pygame.init()
@@ -17,6 +24,11 @@ pygame.mixer.init()
 # 创建游戏窗口
 screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 pygame.display.set_caption('Variant Chess Game')
+
+
+async def send_score_async(headers, data):
+    async with aiohttp.ClientSession() as session:
+        await session.post(UPLOAD_SCORE, json=data, headers=headers)
 
 
 # 棋子类
@@ -53,6 +65,7 @@ class Piece:
 class ChessGame:
     def __init__(self):
 
+        self.sen_score = None
         self.super_move = False
         self.board = [[None for _ in range(BOARD_SIZE)] for _ in range(BOARD_SIZE)]
         self.red_piece = None
@@ -74,6 +87,7 @@ class ChessGame:
         self.occur_pieces = None
         self.reset_game()
         self.control_refresh()
+        self.headers = {'Content-Type': 'application/json'}
 
     def reset_game(self):
         """重置游戏状态"""
@@ -675,8 +689,14 @@ class ChessGame:
         surface.blit(count_surface, (10, 70))
 
     def save_score(self):
-        total_score = sum(PIECES_SCORE[k] * v for k, v in self.score_data.items())
-        requests.post("http://127.0.0.1:80/rank/", data={'total_score': total_score})
+        self.sen_score = True
+        # asyncio.create_task(send_score_async(self.headers, None))
+        # payload = None
+        # response = requests.request("POST", UPLOAD_SCORE, headers=self.headers, data=payload)
+        #
+        # print(response.text)
+        # total_score = sum(PIECES_SCORE[k] * v for k, v in self.score_data.items())
+        # requests.post("http://127.0.0.1:80/rank/", data={'total_score': total_score})
 
 
 def resource_path(relative_path):
@@ -689,10 +709,10 @@ def resource_path(relative_path):
     return os.path.normpath(full_path)
 
 
-def main():
-    # 创建游戏实例
+# def main():
+#     # 创建游戏实例
 
-    from register import LoginSystem
+async def game_main_loop():
     login_system = LoginSystem(screen)
 
     game = ChessGame()
@@ -706,6 +726,11 @@ def main():
     quit_btn = None
 
     while running:
+
+        if game.sen_score:
+            game.sen_score = False
+            await send_score_async(game.headers, None)  # 确保等待协程
+
         for event in pygame.event.get():
             if event.type == QUIT:
                 running = False
@@ -718,6 +743,7 @@ def main():
                     current_state = GAME_STATE
                     # 重置游戏
                     game = ChessGame()
+                    game.headers = login_system.headers
             elif current_state == GAME_STATE or current_state == GAME_OVER_STATE:
                 # 游戏结束 记录游戏数据
                 if event.type == MOUSEBUTTONDOWN:
@@ -753,4 +779,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(game_main_loop())
