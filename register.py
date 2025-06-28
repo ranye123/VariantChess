@@ -43,6 +43,28 @@ class LoginSystem:
         self.error_msg = ''
         self.headers = {'Content-Type': 'application/json'}
 
+        self.cache_token_file = 'token.txt'
+
+    def check_login(self):
+        try:
+            with open(self.cache_token_file, 'r') as f:
+                file_data = f.readlines()
+                if not file_data:
+                    return False
+                else:
+                    token = file_data[-1]
+        except FileNotFoundError:
+            return False
+        self.headers.update({'Authorization': f'Bearer {token}'})
+        resp = requests.get(CHECK_LOGIN, headers=self.headers).json()
+
+        if resp['code'] == 200:
+            self.state = GAME_STATE
+            return True
+        else:
+            self.headers = {'Content-Type': 'application/json'}
+            return False
+
     def handle_event(self, event):
         """处理事件"""
         if event.type == MOUSEBUTTONDOWN:
@@ -114,6 +136,10 @@ class LoginSystem:
             username = data['username']
             self.state = GAME_STATE
             self.error_msg = ""
+
+            with open(self.cache_token_file, 'w') as f:
+                f.writelines(access)
+
             self.headers.update({'Authorization': f'Bearer {access}'})
         else:
             self.error_msg = 'error username or password'

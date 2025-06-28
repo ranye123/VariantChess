@@ -34,9 +34,11 @@ PIECES_SCORE = {
     '将': 50,
 }
 
-UPLOAD_SCORE = "http://127.0.0.1:80/rank/"
+RANK_DETAIL = "http://127.0.0.1:80/rank/rank_detail/"
+UPLOAD_SCORE = "http://127.0.0.1:80/rank/upload_score/"
 LOGIN_URL = 'http://127.0.0.1:80/user/login/'
 REGISTER_URL = 'http://127.0.0.1:80/user/register/'
+CHECK_LOGIN = 'http://127.0.0.1:80/user/check/'
 
 MINIMUM_PASSWD_LEN = 4
 MAXIMUM_PASSWD_LEN = 12

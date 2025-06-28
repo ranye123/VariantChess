@@ -29,6 +29,7 @@ pygame.display.set_caption('Variant Chess Game')
 async def send_score_async(headers, data):
     async with aiohttp.ClientSession() as session:
         await session.post(UPLOAD_SCORE, json=data, headers=headers)
+        # await session.get(UPLOAD_SCORE, headers=headers)
 
 
 # 棋子类
@@ -65,7 +66,8 @@ class Piece:
 class ChessGame:
     def __init__(self):
 
-        self.sen_score = None
+        self.total_score = 0
+        self.send_score = None
         self.super_move = False
         self.board = [[None for _ in range(BOARD_SIZE)] for _ in range(BOARD_SIZE)]
         self.red_piece = None
@@ -88,6 +90,8 @@ class ChessGame:
         self.reset_game()
         self.control_refresh()
         self.headers = {'Content-Type': 'application/json'}
+        self.task_id = uuid.uuid4().hex
+        self.rank_details = []
 
     def reset_game(self):
         """重置游戏状态"""
@@ -637,9 +641,60 @@ class ChessGame:
         # 将对话框Surface绘制到主屏幕上
         screen.blit(dialog_surface, dialog_rect.topleft)
 
-        # 返回按钮位置（需要调整坐标）
         return pygame.Rect(dialog_rect.x + 30, dialog_rect.y + 110, 100, 30), \
             pygame.Rect(dialog_rect.x + 170, dialog_rect.y + 110, 100, 30)
+
+    def show_rank_details(self, is_click):
+        if is_click:
+            self.get_rank()
+
+        rank_surface = pygame.Surface((400, 300), pygame.SRCALPHA)  # SRCALPHA 标志启用透明通道
+        rank_rect = rank_surface.get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2))
+
+        # 绘制半透明对话框背景
+        pygame.draw.rect(rank_surface, (*DIALOG_BG_COLOR, 180), rank_surface.get_rect())  # 180 是透明度值
+        pygame.draw.rect(rank_surface, (0, 0, 0, 255), rank_surface.get_rect(), 2)  # 黑色边框
+        # 将对话框Surface绘制到主屏幕上
+
+        # 添加文本
+        font = pygame.font.SysFont(None, 36)
+        rank_text = font.render("Rank", True, (255, 0, 0))
+        rank_surface.blit(rank_text, ((WINDOW_WIDTH // 2 + rank_text.get_width()) // 2, 0))
+
+        # 添加按钮
+        refresh_btn = pygame.Rect(1, 1, 50, 20)
+        close_btn = pygame.Rect(369, 1, 30, 20)
+
+        pygame.draw.rect(rank_surface, (0, 200, 0, 255), refresh_btn)  # 按钮完全不透明
+        pygame.draw.rect(rank_surface, (200, 0, 0, 255), close_btn)
+
+        font = pygame.font.SysFont(None, 24)
+        restart_text = font.render("Ref.", True, (255, 255, 255))
+        close_text = font.render("X", True, (255, 255, 255))
+        rank_surface.blit(restart_text, (refresh_btn.x + 10, refresh_btn.y + 5))
+        rank_surface.blit(close_text, (close_btn.centerx - close_text.get_width() // 2,
+                                       close_btn.centery - close_text.get_height() // 2))
+
+        # 排名详情
+        idx = ' '
+        username = 'user'
+        score = 'score'
+        round_count = 'round'
+        update_time = 'update_time'
+        title = f'{idx}{username:^20}{score:^6}{round_count:^6}{update_time}'
+        rank_text = font.render(title, True, (0, 0, 0))
+        rank_surface.blit(rank_text, (10, 20))
+        font = pygame.font.SysFont(None, 24)
+
+        for idx, data in enumerate(self.rank_details, start=1):
+            line_value = f'{idx}{data["username"]:^20}{data["score"]:^6}{data["round"]:^6}  {data["update_time"]:^15}'
+            line = font.render(line_value, True, (0, 0, 0))
+            line_y = (idx + 1) * 20
+            rank_surface.blit(line, (10, line_y))
+
+        screen.blit(rank_surface, rank_rect.topleft)
+        return pygame.Rect(rank_rect.x + refresh_btn.x, rank_rect.y + refresh_btn.y, 50, 20), \
+            pygame.Rect(rank_rect.x + close_btn.x, rank_rect.y + close_btn.y, 30, 20)
 
     def draw_chess_board_pieces(self, surface):
         """绘制棋盘和棋子"""
@@ -688,15 +743,24 @@ class ChessGame:
         count_surface = font.render(count_text, True, (0, 0, 0))
         surface.blit(count_surface, (10, 70))
 
+        # 排名
+        rank_btn = pygame.Rect(WINDOW_WIDTH - 60, 50, 40, 40)
+        pygame.draw.rect(surface, INFO_BG_COLOR, rank_btn)  # 按钮完全不透明
+        rank_text = font.render("Rank", True, (0, 0, 0))
+        surface.blit(rank_text, (rank_btn.centerx - rank_text.get_width() // 2,
+                                 rank_btn.centery - rank_text.get_height() // 2))
+
+        return rank_btn
+
     def save_score(self):
-        self.sen_score = True
-        # asyncio.create_task(send_score_async(self.headers, None))
-        # payload = None
-        # response = requests.request("POST", UPLOAD_SCORE, headers=self.headers, data=payload)
-        #
-        # print(response.text)
-        # total_score = sum(PIECES_SCORE[k] * v for k, v in self.score_data.items())
-        # requests.post("http://127.0.0.1:80/rank/", data={'total_score': total_score})
+        self.send_score = True
+        self.total_score = sum(PIECES_SCORE[k] * v for k, v in self.score_data.items())
+
+    def get_rank(self):
+        resp = requests.get(RANK_DETAIL, headers=self.headers).json()
+        print(resp)
+        if resp['code'] == 200:
+            self.rank_details = resp['data']
 
 
 def resource_path(relative_path):
@@ -724,12 +788,19 @@ async def game_main_loop():
     running = True
     restart_btn = None
     quit_btn = None
+    rank_btn = None
+    check_login = False
+    show_rank = False
+    refresh = False
+    refresh_btn = None
+    close_btn = None
 
     while running:
 
-        if game.sen_score:
-            game.sen_score = False
-            await send_score_async(game.headers, None)  # 确保等待协程
+        if game.send_score:
+            game.send_score = False
+            data = {'round': game.round_count, 'task_id': game.task_id, 'score': game.total_score}
+            await send_score_async(game.headers, data)
 
         for event in pygame.event.get():
             if event.type == QUIT:
@@ -753,15 +824,31 @@ async def game_main_loop():
                                 game = ChessGame()  # 重新开始游戏
                             elif quit_btn.collidepoint(event.pos):
                                 running = False
+                        elif rank_btn and rank_btn.collidepoint(event.pos):
+                            show_rank = True
+                            refresh = True  # 用于只获取一次排名信息
+                        elif refresh_btn and refresh_btn.collidepoint(event.pos):
+                            refresh = True
+                        elif close_btn and close_btn.collidepoint(event.pos):
+                            print(f'关闭排名！！')
+                            show_rank = False
                         else:
                             game.handle_click(event.pos)
         # 绘制游戏
         screen.fill((0, 0, 0))
         if current_state == LOGIN_STATE or current_state == REGISTER_STATE:
-            game.draw_chess_board_pieces(screen)
-            login_system.draw()
+            rank_btn = game.draw_chess_board_pieces(screen)
+
+            if not check_login:
+                if not login_system.check_login():
+                    check_login = True
+                    login_system.draw()
+
         elif current_state == GAME_STATE:
-            game.draw_chess_board_pieces(screen)
+            rank_btn = game.draw_chess_board_pieces(screen)
+            if show_rank:
+                refresh_btn, close_btn = game.show_rank_details(refresh)
+                refresh = False
             # 如果游戏结束，显示对话框
             if game.game_over:
                 if not hasattr(game, 'death_sound_played'):
